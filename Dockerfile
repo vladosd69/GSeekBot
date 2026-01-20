@@ -1,25 +1,35 @@
-FROM python:3.13-slim-bookworm
+FROM python:3.13.6-slim
 
-# The installer requires curl (and certificates) to download the release archive
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
+ENV PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    UV_NO_CACHE=1
 
-# Download the latest installer
-ADD https://astral.sh/uv/install.sh /uv-installer.sh
-
-# Run the installer then remove it
-RUN sh /uv-installer.sh && rm /uv-installer.sh
-
-# Ensure the installed binary is on the `PATH`
-ENV PATH="/root/.local/bin/:$PATH"
+ARG USER_ID=${USER_ID:-999}
+ARG GROUP_ID=${GROUP_ID:-999}
+ARG USER_NAME=${USER_NAME:-api}
 
 WORKDIR /app
 
-COPY pyproject.toml ./
-COPY uv.lock ./
-COPY .python-version ./
+RUN if [ "$USER_NAME" != "root" ]; then \
+    echo "Creating non-root user: $USER_NAME" && \
+    groupadd --system --gid=${GROUP_ID} ${USER_NAME} && \
+    useradd --system --shell /bin/false --no-log-init --gid=${GROUP_ID} --uid=${USER_ID} ${USER_NAME} && \
+    chown ${USER_NAME}:${USER_NAME} /app ; \
+    else \
+    echo "Running as root, skipping user creation"; \
+    fi
 
-RUN uv sync 
+USER ${USER_NAME}
 
-COPY . .
+COPY --chown=${USER_NAME}:${USER_NAME} pyproject.toml ./
+COPY --chown=${USER_NAME}:${USER_NAME} uv.lock* ./
 
-CMD ["uv", "run", "-m", "bot.main"]
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
+    uv sync --no-dev --frozen --no-install-project
+
+COPY --chown=${USER_NAME}:${USER_NAME} . /app/
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
+    uv sync --no-dev --frozen
