@@ -1,9 +1,11 @@
 import aiohttp
+import logging
 import asyncio
 import re
 from bs4 import BeautifulSoup
-from loguru import logger
 from duckduckgo_search import DDGS
+
+logger = logging.getLogger(__name__)
 
 
 async def ddg_definitions(
@@ -15,18 +17,16 @@ async def ddg_definitions(
 ) -> tuple[str, str]:
     await asyncio.sleep(pause_between)
     attempt = 0
-    results = []
 
     while attempt < retries:
         try:
             with DDGS() as ddgs:
-                results = ddgs.text(
+                return ddgs.text(
                     keywords=query,
                     max_results=max_results
                 )
-                return results
             break
-        except Exception:
+        except Exception:  # noqa: BLE001
             attempt += 1
             if attempt >= retries:
                 return None
@@ -37,7 +37,7 @@ async def ddg_definitions(
 async def ddg_html_search(query: str, max_results: int = 10) -> list[dict]:
     """
     Повертає list[dict] виду:
-    [{'title': ..., 'url': ..., 'snippet': ...}, …]
+    [{'title': ..., 'url': ..., 'snippet': ...}, …].
     """
     try:
         url = "https://duckduckgo.com/html/"
@@ -46,10 +46,12 @@ async def ddg_html_search(query: str, max_results: int = 10) -> list[dict]:
             "User-Agent": "Mozilla/5.0",
             "Accept": "text/html",
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params, headers=headers) as resp:
-                resp.raise_for_status()
-                html = await resp.text()
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(url, params=params, headers=headers) as resp,
+        ):
+            resp.raise_for_status()
+            html = await resp.text()
 
         soup = BeautifulSoup(html, "html.parser")
         results = []
@@ -60,10 +62,10 @@ async def ddg_html_search(query: str, max_results: int = 10) -> list[dict]:
             url = a_title["href"] if a_title and a_title.has_attr("href") else ""
 
             snippet_tag = (
-                result.select_one("a.result__snippet") or  
-                result.select_one("div.result__snippet") or      
+                result.select_one("a.result__snippet") or
+                result.select_one("div.result__snippet") or
                 result.select_one(".result__body .snippet") or
-                result.select_one(".result__snippet")       
+                result.select_one(".result__snippet")
             )
             if snippet_tag:
                 snippet = " ".join(snippet_tag.stripped_strings)
@@ -74,19 +76,18 @@ async def ddg_html_search(query: str, max_results: int = 10) -> list[dict]:
 
             results.append({
                 "title": title,
-                "href": 'https:'+url,
+                "href": "https:"+url,
                 "body": snippet
             })
 
         return results
-    except Exception as e:
-        logger.error(f"Error during DuckDuckGo HTML search: {e}")
+    except Exception:
+        logger.exception("Error during DuckDuckGo HTML search")
         return None
-    
+
 
 async def get(text: str) -> str:
     result = await ddg_html_search(text)
     if result is None:
         result = await ddg_definitions(text)
-        
     return result or None

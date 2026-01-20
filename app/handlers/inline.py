@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import html
+import logging
 from uuid import uuid4
 from urllib.parse import unquote, parse_qs
 
@@ -12,43 +13,42 @@ from aiogram.types import (
     InputTextMessageContent
 )
 
-from bot.services import duckduckgo
+from app.utils import duckduckgo
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.inline_query()
-async def inline_result(
-    query: InlineQuery,
-):
-    if not query.query or query.query == ' ':
+async def inline_result(query: InlineQuery) -> None:
+    if not query.query or query.query == " ":
         return
-    
+
     results = []
     search_results = await duckduckgo.get(query.query)
-    
+
     if not search_results:
         return
-    
+
     for item in search_results:
-        body = item.get('body', '').strip()
-        href = item.get('href', '').strip()
-        title = item.get('title', '').strip()
-        
-        if 'duckduckgo.com/l/?' in href:
-            query_params = parse_qs(href.split('?', 1)[1])
-            if 'uddg' in query_params:
-                href = unquote(query_params['uddg'][0])
-        
+        body = item.get("body", "").strip()
+        href = item.get("href", "").strip()
+        title = item.get("title", "").strip()
+
+        if "duckduckgo.com/l/?" in href:
+            query_params = parse_qs(href.split("?", 1)[1])
+            if "uddg" in query_params:
+                href = unquote(query_params["uddg"][0])
+
         if not body and not href and not title:
             continue
-    
-        step1 = re.sub(r'\s*\[[^\]]*?\]\s*', ' ', body)
-        _body = re.sub(r' {2,}', ' ', step1).strip()
+
+        step1 = re.sub(r"\s*\[[^\]]*?\]\s*", " ", body)
+        _body = re.sub(r" {2,}", " ", step1).strip()
         escaped_href = html.escape(href, quote=True)
         url_symbol = f'<a href="{escaped_href}">→</a>'
-        message_text = _body.replace(' ...', '…')+' '+url_symbol
-        
+        message_text = _body.replace(" ...", "…")+" "+url_symbol
+
         results.append(
             InlineQueryResultArticle(
                 id=str(uuid4()),
@@ -62,5 +62,6 @@ async def inline_result(
                 description=_body[:200]
             )
         )
-    
+
     await query.answer(results=results)
+    logger.info("Inline query processed: %s", query.query)
