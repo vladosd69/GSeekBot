@@ -1,7 +1,11 @@
-import aiohttp
-import logging
+from __future__ import annotations
+
 import asyncio
+import logging
 import re
+from typing import Any
+
+import aiohttp
 from bs4 import BeautifulSoup
 from duckduckgo_search import DDGS
 
@@ -13,18 +17,15 @@ async def ddg_definitions(
     max_results: int = 10,
     pause_between: float = 1.0,
     retries: int = 3,
-    retry_pause: float = 2.0
-) -> tuple[str, str]:
+    retry_pause: float = 2.0,
+) -> list[dict[str, Any]] | None:
     await asyncio.sleep(pause_between)
     attempt = 0
 
     while attempt < retries:
         try:
             with DDGS() as ddgs:
-                return ddgs.text(
-                    keywords=query,
-                    max_results=max_results
-                )
+                return ddgs.text(keywords=query, max_results=max_results)
             break
         except Exception:  # noqa: BLE001
             attempt += 1
@@ -34,7 +35,7 @@ async def ddg_definitions(
     return None
 
 
-async def ddg_html_search(query: str, max_results: int = 10) -> list[dict]:
+async def ddg_html_search(query: str, max_results: int = 10) -> list[dict] | None:
     """
     Повертає list[dict] виду:
     [{'title': ..., 'url': ..., 'snippet': ...}, …].
@@ -62,10 +63,10 @@ async def ddg_html_search(query: str, max_results: int = 10) -> list[dict]:
             url = a_title["href"] if a_title and a_title.has_attr("href") else ""
 
             snippet_tag = (
-                result.select_one("a.result__snippet") or
-                result.select_one("div.result__snippet") or
-                result.select_one(".result__body .snippet") or
-                result.select_one(".result__snippet")
+                result.select_one("a.result__snippet")
+                or result.select_one("div.result__snippet")
+                or result.select_one(".result__body .snippet")
+                or result.select_one(".result__snippet")
             )
             if snippet_tag:
                 snippet = " ".join(snippet_tag.stripped_strings)
@@ -74,11 +75,7 @@ async def ddg_html_search(query: str, max_results: int = 10) -> list[dict]:
             else:
                 snippet = ""
 
-            results.append({
-                "title": title,
-                "href": "https:"+url,
-                "body": snippet
-            })
+            results.append({"title": title, "href": "https:" + url, "body": snippet})  # ty:ignore[unsupported-operator]
 
         return results
     except Exception:
@@ -86,7 +83,7 @@ async def ddg_html_search(query: str, max_results: int = 10) -> list[dict]:
         return None
 
 
-async def get(text: str) -> str:
+async def get(text: str) -> list[dict[str, Any]] | None:
     result = await ddg_html_search(text)
     if result is None:
         result = await ddg_definitions(text)

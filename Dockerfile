@@ -1,35 +1,17 @@
-FROM python:3.13.6-slim
+FROM python:3.14-alpine
 
-ENV PYTHONUNBUFFERED=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    UV_NO_CACHE=1
 
-ARG USER_ID=${USER_ID:-999}
-ARG GROUP_ID=${GROUP_ID:-999}
-ARG USER_NAME=${USER_NAME:-api}
+ENV GSEEKBOT_LOG_FILE=/data/bot.log
 
-WORKDIR /app
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+ENV UV_SYSTEM_PYTHON=1
 
-RUN if [ "$USER_NAME" != "root" ]; then \
-    echo "Creating non-root user: $USER_NAME" && \
-    groupadd --system --gid=${GROUP_ID} ${USER_NAME} && \
-    useradd --system --shell /bin/false --no-log-init --gid=${GROUP_ID} --uid=${USER_ID} ${USER_NAME} && \
-    chown ${USER_NAME}:${USER_NAME} /app ; \
-    else \
-    echo "Running as root, skipping user creation"; \
-    fi
 
-USER ${USER_NAME}
-
-COPY --chown=${USER_NAME}:${USER_NAME} pyproject.toml ./
-COPY --chown=${USER_NAME}:${USER_NAME} uv.lock* ./
-
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
-    uv sync --no-dev --frozen --no-install-project
-
-COPY --chown=${USER_NAME}:${USER_NAME} . /app/
-
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
-    uv sync --no-dev --frozen
+RUN --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
+    --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,target=/build_src,ro \
+    uv pip install /build_src
+    
+    
+CMD [ "gseek-bot" ]

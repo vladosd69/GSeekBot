@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from aiogram import Router
 from typing import TYPE_CHECKING
+
+from aiogram import Router
 
 if TYPE_CHECKING:
     from aiogram.types import Message
@@ -21,7 +22,4 @@ async def handler(message: Message) -> None:
     message_text += "\n\nFor example: <code>@GSeekBot What is a metaphor?</code>"
     message_text += f"\n\n{blog} | {github}"
 
-    await message.answer(
-        text=message_text,
-        disable_web_page_preview=True
-    )
+    await message.answer(text=message_text, disable_web_page_preview=True)

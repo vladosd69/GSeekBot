@@ -1,28 +1,27 @@
 services:
-  gseek-bot:
+  bot:
     build:
-      dockerfile: Dockerfile
+      dockerfile: ./Dockerfile
+    environment:
+      MONGO__HOST: mongo
+      MONGO__PORT: 27017
+      MONGO__USER: ку
+      MONGO__PASSWORD: свiт
+      MONGO__NAME: gseek-bot
     env_file: .env
     volumes:
-      - ./logs:/app/logs
-    stop_signal: SIGINT
+      - bot_data:/data
     restart: unless-stopped
-    entrypoint: [ ".venv/bin/python", "-m", "app.main" ]
-    networks:
-      - my_docker_network
-  # mongo:
-  #   image: mongo:8.0
-  #   restart: unless-stopped
-  #   ports:
-  #     - "27017:27017"
-  #   environment:
-  #     MONGO_INITDB_ROOT_USERNAME: admin
-  #     MONGO_INITDB_ROOT_PASSWORD: password
-  #   volumes:
-  #     - ./mongodb/data:/data/db
-  #   networks:
-  #     - my_docker_network
+  mongo:
+    image: mongo:4 # mongo 5+ doesnt support CPU without AVX
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ку
+      MONGO_INITDB_ROOT_PASSWORD: свiт
+    volumes:
+      - mongo_data:/data/db
 
-networks:
-  my_docker_network:
-    external: true
+volumes:
+  bot_data:
+  mongo_data:
+

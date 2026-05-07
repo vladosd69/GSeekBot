@@ -1,11 +1,18 @@
+from __future__ import annotations
+
 import logging
-import coloredlogs
 from logging.handlers import RotatingFileHandler
+from typing import TYPE_CHECKING
+
+import coloredlogs
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-def configure_logging(file_name: str) -> None:
+def configure_logging(file_path: Path) -> None:
     log_format = "%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s"
     date_format = "%Y-%m-%d %H:%M:%S"
 
@@ -23,10 +30,7 @@ def configure_logging(file_name: str) -> None:
     )
 
     file_handler = RotatingFileHandler(
-        f"logs/{file_name}.log",
-        maxBytes=5 * 1024 * 1024,
-        backupCount=5,
-        encoding="utf-8"
+        file_path, maxBytes=5 * 1024 * 1024, backupCount=5, encoding="utf-8"
     )
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))

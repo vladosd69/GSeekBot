@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 from aiogram import Router
 
-from . import message, inline
-
+from . import inline, message
 
 __all__ = [
     "inline",

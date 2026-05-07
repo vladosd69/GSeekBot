@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import urllib.parse
 
-from pydantic import SecretStr
+from pydantic import BaseModel, ConfigDict, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class MongoSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="MONGO_")
+class MongoSettings(BaseModel):
+    model_config = ConfigDict(hide_input_in_errors=True)
 
     HOST: str
     PORT: int
@@ -15,12 +17,13 @@ class MongoSettings(BaseSettings):
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict()
+    model_config = SettingsConfigDict(
+        env_nested_delimiter="__", extra="ignore", hide_input_in_errors=True
+    )
 
-    COMPOSE_PROJECT_NAME: str
     BOT_TOKEN: SecretStr
 
-    MONGO: MongoSettings = MongoSettings()
+    MONGO: MongoSettings
 
     @property
     def mongo_dsn(self) -> str:
@@ -30,5 +33,3 @@ class Settings(BaseSettings):
             host=self.MONGO.HOST,
             port=self.MONGO.PORT,
         )
-
-settings = Settings()

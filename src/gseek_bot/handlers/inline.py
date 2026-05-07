@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-import re
 import html
 import logging
+import re
+from urllib.parse import parse_qs, unquote
 from uuid import uuid4
-from urllib.parse import unquote, parse_qs
 
 from aiogram import Router
-from aiogram.types import (
-    InlineQuery,
-    InlineQueryResultArticle,
-    InputTextMessageContent
-)
+from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
 
-from app.utils import duckduckgo
+from gseek_bot.utils import duckduckgo
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -47,19 +43,18 @@ async def inline_result(query: InlineQuery) -> None:
         _body = re.sub(r" {2,}", " ", step1).strip()
         escaped_href = html.escape(href, quote=True)
         url_symbol = f'<a href="{escaped_href}">→</a>'
-        message_text = _body.replace(" ...", "…")+" "+url_symbol
+        message_text = _body.replace(" ...", "…") + " " + url_symbol
 
         results.append(
             InlineQueryResultArticle(
                 id=str(uuid4()),
                 title=title or _body[:30],
                 input_message_content=InputTextMessageContent(
-                    message_text=message_text,
-                    disable_web_page_preview=True
+                    message_text=message_text, disable_web_page_preview=True
                 ),
                 url=href,
                 hide_url=True,
-                description=_body[:200]
+                description=_body[:200],
             )
         )
 
